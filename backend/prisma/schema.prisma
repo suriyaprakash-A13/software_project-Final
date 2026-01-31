@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USER MODEL
+// ============================================================
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  avatar    String?  // Google profile picture URL
+  googleId  String   @unique // Google OAuth ID
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  memberships Membership[] // Groups the user belongs to
+  expenses    Expense[]    @relation("ExpensePayer") // Expenses where user is the payer
+  createdExpenses Expense[] @relation("ExpenseCreator") // Expenses created by user
+  settlementsFrom Settlement[] @relation("SettlementFrom") // Payments user needs to make
+  settlementsTo   Settlement[] @relation("SettlementTo")   // Payments user will receive
+
+  @@index([email])
+  @@index([googleId])
+  @@map("users")
+}
+
+// ============================================================
+// GROUP MODEL
+// ============================================================
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  memberships Membership[]
+  expenses    Expense[]
+  settlements Settlement[]
+
+  @@index([createdAt])
+  @@map("groups")
+}
+
+// ============================================================
+// MEMBERSHIP MODEL (Junction Table)
+// ============================================================
+enum MembershipRole {
+  OWNER
+  MEMBER
+}
+
+model Membership {
+  id       String         @id @default(uuid())
+  role     MembershipRole @default(MEMBER)
+  joinedAt DateTime       @default(now())
+
+  // Foreign Keys
+  userId  String
+  groupId String
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Composite unique constraint: A user can only be in a group once
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([groupId, role]) // For owner-only queries
+  @@map("memberships")
+}
+
+// ============================================================
+// EXPENSE MODEL
+// ============================================================
+enum ExpenseCategory {
+  FOOD
+  TRANSPORTATION
+  ACCOMMODATION
+  ENTERTAINMENT
+  UTILITIES
+  SHOPPING
+  HEALTHCARE
+  EDUCATION
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  amount      Decimal         @db.Decimal(10, 2) // Max 99,999,999.99
+  description String
+  category    ExpenseCategory @default(OTHER)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Foreign Keys
+  payerId   String // User who paid
+  groupId   String
+  createdBy String // User who created the expense entry
+
+  // Relations
+  payer   User  @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Restrict)
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator User  @relation("ExpenseCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  // Indexes for performance
+  @@index([groupId, createdAt(sort: Desc)]) // Group timeline (most common query)
+  @@index([payerId])
+  @@index([createdBy])
+  @@index([groupId, category]) // Category-wise analytics
+  @@index([groupId, payerId]) // User balance in group
+  @@map("expenses")
+}
+
+// ============================================================
+// SETTLEMENT MODEL (Optional - for tracking settlements)
+// ============================================================
+enum SettlementStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Settlement {
+  id        String           @id @default(uuid())
+  amount    Decimal          @db.Decimal(10, 2)
+  status    SettlementStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Foreign Keys
+  groupId    String
+  fromUserId String // User who owes money
+  toUserId   String // User who will receive money
+
+  // Relations
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User  @relation("SettlementFrom", fields: [fromUserId], references: [id], onDelete: Restrict)
+  toUser   User  @relation("SettlementTo", fields: [toUserId], references: [id], onDelete: Restrict)
+
+  // Indexes
+  @@index([groupId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([groupId, status]) // Pending settlements per group
+  @@map("settlements")
+}
