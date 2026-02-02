@@ -68,13 +68,17 @@ export class AnalyticsController {
     @Query('endDate') endDate?: string,
   ) {
     // Users can only view their own analytics
-    if (userId !== currentUserId) {
-      userId = currentUserId;
+    // Support 'me' as an alias for current user
+    const targetUserId = userId === 'me' ? currentUserId : userId;
+    
+    if (targetUserId !== currentUserId) {
+      // For security, only allow users to view their own analytics
+      return this.analyticsService.getUserSummary(currentUserId, undefined, undefined);
     }
 
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
-    return this.analyticsService.getUserSummary(userId, start, end);
+    return this.analyticsService.getUserSummary(targetUserId, start, end);
   }
 }
