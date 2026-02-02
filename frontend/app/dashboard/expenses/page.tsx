@@ -128,8 +128,12 @@ export default function ExpensesPage() {
                       </div>
                       <div className="mt-2 flex items-center gap-3 text-sm text-gray-600 font-medium flex-wrap">
                         <span className="text-primary-600 font-semibold">{expense.payer.name}</span>
-                        <span>·</span>
-                        <span>{expense.group.name}</span>
+                        {expense.group && (
+                          <>
+                            <span>·</span>
+                            <span>{expense.group.name}</span>
+                          </>
+                        )}
                         <span>·</span>
                         <span>{formatDate(expense.createdAt)}</span>
                       </div>

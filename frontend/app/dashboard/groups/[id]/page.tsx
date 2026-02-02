@@ -7,10 +7,12 @@ import Link from 'next/link';
 import { groupsApi } from '@/lib/api/groups';
 import { expensesApi } from '@/lib/api/expenses';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useAuthStore } from '@/lib/store/auth-store';
 
 export default function GroupDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [memberEmail, setMemberEmail] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -27,7 +29,7 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
 
   const addMemberMutation = useMutation({
     mutationFn: (email: string) =>
-      groupsApi.addMember(params.id, { userEmail: email }),
+      groupsApi.addMember(params.id, { email }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', params.id] });
       setShowAddMemberModal(false);
@@ -68,7 +70,11 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
     return <div>Group not found</div>;
   }
 
-  const isOwner = group.role === 'OWNER';
+  // Find current user's membership to check their role
+  const currentUserMembership = group.memberships.find(
+    (m) => m.user.id === user?.id
+  );
+  const isOwner = currentUserMembership?.role === 'OWNER';
 
   return (
     <div className="space-y-6">
@@ -83,7 +89,7 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
           </Link>
           <h1 className="mt-2 text-3xl font-bold text-gray-900">{group.name}</h1>
           <p className="mt-1 text-gray-600">
-            {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+            {group.memberships.length} member{group.memberships.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex gap-3">
@@ -114,7 +120,9 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
           <p className="text-sm font-medium text-gray-600">Your Role</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{group.role}</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900">
+            {currentUserMembership?.role || 'N/A'}
+          </p>
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
           <p className="text-sm font-medium text-gray-600">Created</p>
@@ -140,7 +148,7 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
         <div className="space-y-3">
           {group.memberships.map((membership) => (
             <div
-              key={membership.userId}
+              key={membership.user.id}
               className="flex items-center justify-between rounded-lg border p-4"
             >
               <div className="flex items-center gap-3">
@@ -168,7 +176,7 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
                 </span>
                 {isOwner && membership.role !== 'OWNER' && (
                   <button
-                    onClick={() => removeMemberMutation.mutate(membership.userId)}
+                    onClick={() => removeMemberMutation.mutate(membership.user.id)}
                     className="text-sm text-red-600 hover:text-red-700"
                   >
                     Remove

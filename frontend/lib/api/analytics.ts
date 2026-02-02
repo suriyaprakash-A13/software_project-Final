@@ -55,6 +55,6 @@ export const analyticsApi = {
   getCategories: (groupId: string, params?: { startDate?: string; endDate?: string }) =>
     apiClient.get<CategoryAnalytics>(`/analytics/groups/${groupId}/categories`, { params }),
 
-  getUserSummary: (userId: string, params?: { startDate?: string; endDate?: string }) =>
-    apiClient.get<UserSummary>(`/analytics/users/${userId}/summary`, { params }),
+  getUserSummary: (params?: { startDate?: string; endDate?: string }) =>
+    apiClient.get<UserSummary>(`/analytics/users/me/summary`, { params }),
 };

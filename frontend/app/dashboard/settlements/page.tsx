@@ -71,7 +71,7 @@ export default function SettlementsPage() {
                   <p className="text-sm font-medium text-gray-600">Your Balance</p>
                   <p
                     className={`mt-2 text-3xl font-bold ${
-                      (userBalance?.netBalance || 0) >= 0
+                      parseFloat(String(userBalance?.netBalance || 0)) >= 0
                         ? 'text-green-600'
                         : 'text-red-600'
                     }`}
@@ -79,7 +79,7 @@ export default function SettlementsPage() {
                     {formatCurrency(userBalance?.netBalance || 0)}
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
-                    {(userBalance?.netBalance || 0) >= 0
+                    {parseFloat(String(userBalance?.netBalance || 0)) >= 0
                       ? 'You are owed'
                       : 'You owe'}
                   </p>
@@ -117,15 +117,15 @@ export default function SettlementsPage() {
                       <div>
                         <p className="font-semibold text-gray-900">{balance.userName}</p>
                         <p className="text-sm text-gray-600">
-                          {balance.balance >= 0 ? 'Should receive' : 'Should pay'}
+                          {parseFloat(balance.netBalance) >= 0 ? 'Should receive' : 'Should pay'}
                         </p>
                       </div>
                       <p
                         className={`text-xl font-bold ${
-                          balance.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                          parseFloat(balance.netBalance) >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}
                       >
-                        {formatCurrency(Math.abs(balance.balance))}
+                        {formatCurrency(Math.abs(parseFloat(balance.netBalance)))}
                       </p>
                     </div>
                   ))}
@@ -150,7 +150,7 @@ export default function SettlementsPage() {
                           <div className="flex items-center gap-4">
                             <div className="text-center">
                               <p className="font-semibold text-gray-900">
-                                {transaction.fromName}
+                                {transaction.from.name}
                               </p>
                               <p className="text-xs text-gray-600">Pays</p>
                             </div>
@@ -161,7 +161,7 @@ export default function SettlementsPage() {
                             </div>
                             <div className="text-center">
                               <p className="font-semibold text-gray-900">
-                                {transaction.toName}
+                                {transaction.to.name}
                               </p>
                               <p className="text-xs text-gray-600">Receives</p>
                             </div>
